@@ -8,12 +8,14 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/mbland/hmacauth"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/authentication/hmacauth"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 )
 
 // Validate checks that required options are set and validates those that they
@@ -30,20 +32,16 @@ func Validate(o *options.Options) error {
 	msgs = parseSignatureKey(o, msgs)
 
 	if o.SSLInsecureSkipVerify {
-		insecureTransport := &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // #nosec G402 -- InsecureSkipVerify is a configurable option we allow
-		}
-		http.DefaultClient = &http.Client{Transport: insecureTransport}
+		transport := requests.DefaultTransport.(*http.Transport)
+		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402 -- InsecureSkipVerify is a configurable option we allow
 	} else if len(o.Providers[0].CAFiles) > 0 {
-		pool, err := util.GetCertPool(o.Providers[0].CAFiles, o.Providers[0].UseSystemTrustStore)
+		pool, err := util.GetCertPool(o.Providers[0].CAFiles, ptr.Deref(o.Providers[0].UseSystemTrustStore, options.DefaultUseSystemTrustStore))
 		if err == nil {
-			transport := http.DefaultTransport.(*http.Transport).Clone()
+			transport := requests.DefaultTransport.(*http.Transport)
 			transport.TLSClientConfig = &tls.Config{
 				RootCAs:    pool,
 				MinVersion: tls.VersionTLS12,
 			}
-
-			http.DefaultClient = &http.Client{Transport: transport}
 		} else {
 			msgs = append(msgs, fmt.Sprintf("unable to load provider CA file(s): %v", err))
 		}

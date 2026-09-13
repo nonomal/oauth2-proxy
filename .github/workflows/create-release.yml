@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Check out code
-      uses: actions/checkout@v4
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         ref: master
         fetch-depth: 0
@@ -54,7 +54,7 @@ jobs:
         git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
     
     - name: Setup node
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
       with:
         node-version-file: docs/package.json
       
@@ -66,7 +66,7 @@ jobs:
         VERSION=${FULL_VERSION%.*}.x
 
         if [ ! -d "versioned_docs/version-${VERSION}" ]; then
-          npm ci
+          npm install
           npm run docusaurus docs:version ${VERSION}
 
           git add .
@@ -90,6 +90,8 @@ jobs:
         ## Important Notes
 
         ## Breaking Changes
+
+        ## Changes since v${VERSION}
         EOF
 
         echo -e "$(cat /tmp/CHANGELOG.prepend)\n\n$(cat CHANGELOG.md)" > CHANGELOG.md
